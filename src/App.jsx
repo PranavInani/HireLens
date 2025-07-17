@@ -27,19 +27,65 @@ function App() {
   const candidateVideoRef = useRef(null)
   const interviewerVideoRef = useRef(null)
 
-  // Simulate confidence score updates
+  // Ensure video element always receives the latest stream
   useEffect(() => {
-    if (webcamStarted && currentPage === 'interview') {
-      const interval = setInterval(() => {
-        setConfidence(prev => {
-          const change = (Math.random() - 0.5) * 10
-          return Math.max(0, Math.min(100, Math.round(prev + change)))
-        })
-      }, 3000)
-
-      return () => clearInterval(interval)
+    if (candidateVideoRef.current && userStream) {
+      candidateVideoRef.current.srcObject = userStream;
     }
-  }, [webcamStarted, currentPage])
+  }, [userStream]);
+
+  // Simulate confidence score updates
+  // ...existing code...
+
+const API_ENDPOINT = 'https://pranavinani-gaze-emotion-api.hf.space/analyze'; // Replace with your actual endpoint
+
+useEffect(() => {
+  if (webcamStarted && currentPage === 'interview') {
+    const interval = setInterval(async () => {
+      const video = candidateVideoRef.current;
+      if (video && video.srcObject) {
+        // Create a canvas and draw the current video frame
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Get the frame as a JPG image (base64)
+        const imageData = canvas.toDataURL('image/jpeg');
+
+        // Helper to convert base64 dataURL to Blob
+        function dataURLtoBlob(dataurl) {
+          const arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+          for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+          return new Blob([u8arr], { type: mime });
+        }
+
+        // Send the JPG image as a file to your FastAPI endpoint
+        try {
+          const formData = new FormData();
+          formData.append('file', dataURLtoBlob(imageData), 'frame.jpg');
+
+          const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            body: formData
+          });
+          const data = await response.json();
+          if (data.concentration_score !== undefined) {
+            setConfidence(data.concentration_score);
+          }
+        } catch (error) {
+          console.error('Error fetching confidence:', error);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }
+}, [webcamStarted, currentPage]);
+
+// ...existing code...
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode)
