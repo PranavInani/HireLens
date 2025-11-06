@@ -27,7 +27,7 @@ const ConfidenceOverlay = ({ confidence, isDarkMode }) => {
           ...confidenceLabelStyles,
           color: isDarkMode ? '#f9fafb' : '#374151'
         }}>
-          AI Confidence
+          AI Concentration
         </span>
         <div style={{
           ...confidenceIndicatorStyles,
